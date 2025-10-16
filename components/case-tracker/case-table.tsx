@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
@@ -11,6 +14,8 @@ import {
 } from "@/components/ui/table";
 import { getCode } from "country-list";
 import { format } from "date-fns";
+import { Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { CaseTableProps } from "@/types/case";
 
 const generateInitials = (name: string): string => {
@@ -28,14 +33,19 @@ const getCountryCode = (country: string): string => {
     return "XX";
   }
 };
-const getStatusColor = (string: string): string => {
+
+const getStatusColor = (status: string): string => {
   const statusColors: { [key: string]: string } = {
     AWAITING_INFORMATION: "bg-yellow-100 text-yellow-800",
     ELIGIBLE: "bg-green-100 text-green-800",
     IN_REVIEW: "bg-blue-100 text-blue-800",
     APPLICATION_PREPARATION: "bg-purple-100 text-purple-800",
+    DOCUMENT_COLLECTION: "bg-blue-100 text-blue-800",
+    GOVERNMENT_PROCESSING: "bg-indigo-100 text-indigo-800",
+    APPROVED: "bg-green-100 text-green-800",
+    REJECTED: "bg-red-100 text-red-800",
   };
-  return statusColors[string] || "bg-gray-100 text-gray-800";
+  return statusColors[status] || "bg-gray-100 text-gray-800";
 };
 
 const getProgressColor = (status: string): string => {
@@ -44,6 +54,10 @@ const getProgressColor = (status: string): string => {
     ELIGIBLE: "bg-green-500",
     IN_REVIEW: "bg-blue-500",
     APPLICATION_PREPARATION: "bg-purple-500",
+    DOCUMENT_COLLECTION: "bg-blue-500",
+    GOVERNMENT_PROCESSING: "bg-indigo-500",
+    APPROVED: "bg-green-500",
+    REJECTED: "bg-red-500",
   };
   return progressColors[status] || "bg-gray-400";
 };
@@ -68,6 +82,8 @@ const formatDate = (dateString?: string): string => {
 };
 
 export function CaseTable({ cases, loading, error }: CaseTableProps) {
+  const router = useRouter();
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -117,11 +133,16 @@ export function CaseTable({ cases, loading, error }: CaseTableProps) {
             <TableHead>Process Status</TableHead>
             <TableHead>Steps Completed</TableHead>
             <TableHead>Expected Completion Date</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {cases.map((case_) => (
-            <TableRow key={case_.id}>
+            <TableRow
+              key={case_.id}
+              className="cursor-pointer hover:bg-gray-50"
+              onClick={() => router.push(`/cases/${case_.id}`)}
+            >
               <TableCell>
                 <div className="flex items-center space-x-3">
                   <Avatar className="w-8 h-8">
@@ -173,6 +194,19 @@ export function CaseTable({ cases, loading, error }: CaseTableProps) {
               </TableCell>
               <TableCell className="text-sm text-gray-600">
                 {formatDate(case_.expectedCompletionDate)}
+              </TableCell>
+              <TableCell className="text-right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/cases/${case_.id}`);
+                  }}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View
+                </Button>
               </TableCell>
             </TableRow>
           ))}

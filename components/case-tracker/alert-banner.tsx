@@ -1,14 +1,17 @@
+import { useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@apollo/client";
-import { GET_CASES_NEEDING_ACTION } from "@/graphql/queries";
+import { useCaseStore } from "@/store/case-store";
 
 export function AlertBanner() {
-  const { loading, error, data } = useQuery(GET_CASES_NEEDING_ACTION);
-  const actionsCount = data?.casesNeedingAction?.length || 0;
+  const { casesNeedingAction, fetchCasesNeedingAction } = useCaseStore();
 
-  if (loading) return null;
-  if (error) return null;
+  useEffect(() => {
+    fetchCasesNeedingAction();
+  }, [fetchCasesNeedingAction]);
+
+  const actionsCount = casesNeedingAction.length;
+
   if (actionsCount === 0) return null;
 
   return (

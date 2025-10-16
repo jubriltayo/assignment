@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useState } from "react";
-import { useMutation, gql } from "@apollo/client";
+import { useCaseStore } from "@/store/case-store";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,10 +31,13 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { getNames } from "country-list";
 import { cn } from "@/lib/utils";
-import type { NewCaseModalProps } from "@/types/case";
-import { CREATE_CASE_MUTATION, GET_ALL_CASES } from "@/graphql/queries";
+import type {
+  NewCaseModalProps,
+  CaseType,
+  CreateCaseInput,
+} from "@/types/case";
 
-const caseTypes = [
+const caseTypes: Array<{ value: CaseType; label: string }> = [
   { value: "SPONSORED_VISA", label: "Sponsored Visa" },
   { value: "EOR_VISA", label: "EOR Visa" },
   { value: "FAMILY_VISA", label: "Family Visa" },
@@ -43,44 +46,29 @@ const caseTypes = [
 
 const countries = getNames().sort();
 
-const getTotalStepsByCaseType = (caseType: string): number => {
-  const stepsMap: { [key: string]: number } = {
-    SPONSORED_VISA: 5,
-    EOR_VISA: 4,
-    FAMILY_VISA: 6,
-    STUDENT_VISA: 3,
-  };
-  return stepsMap[caseType] || 3;
-};
+interface FormData {
+  name: string;
+  caseType: CaseType | "";
+  country: string;
+  expectedCompletionDate: Date | undefined;
+}
 
 export function NewCaseModal({
   isOpen,
   onClose,
   onSuccess,
 }: NewCaseModalProps) {
-  const [formData, setFormData] = useState({
+  const { createCase, isLoading } = useCaseStore();
+  const [formData, setFormData] = useState<FormData>({
     name: "",
     caseType: "",
     country: "",
-    expectedCompletionDate: undefined as Date | undefined,
+    expectedCompletionDate: undefined,
   });
-
-  const [createCase, { loading: isSubmitting, error }] = useMutation(
-    CREATE_CASE_MUTATION,
-    {
-      refetchQueries: [{ query: GET_ALL_CASES }],
-      onCompleted: () => {
-        handleClose();
-        onSuccess?.();
-      },
-      onError: (error) => {
-        console.error("Error creating case:", error);
-      },
-    }
-  );
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (
-    field: string,
+    field: keyof FormData,
     value: string | Date | undefined
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -93,26 +81,27 @@ export function NewCaseModal({
       return;
     }
 
-    const totalSteps = getTotalStepsByCaseType(formData.caseType);
-
-    // Calculate expected completion date if not provided (30 days from now)
-    const expectedDate =
-      formData.expectedCompletionDate ||
-      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    setError(null);
 
     try {
-      await createCase({
-        variables: {
-          input: {
-            name: formData.name,
-            caseType: formData.caseType,
-            country: formData.country,
-            expectedCompletionDate: expectedDate.toISOString().split("T")[0],
-          },
-        },
-      });
+      const input: CreateCaseInput = {
+        name: formData.name,
+        caseType: formData.caseType as CaseType,
+        country: formData.country,
+        expectedCompletionDate: formData.expectedCompletionDate
+          ?.toISOString()
+          .split("T")[0],
+      };
+
+      await createCase(input);
+
+      handleClose();
+      onSuccess?.();
     } catch (err) {
-      console.error("Submission error:", err);
+      console.error("Error creating case:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to create case";
+      setError(errorMessage);
     }
   };
 
@@ -123,6 +112,7 @@ export function NewCaseModal({
       country: "",
       expectedCompletionDate: undefined,
     });
+    setError(null);
     onClose();
   };
 
@@ -149,7 +139,7 @@ export function NewCaseModal({
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
               required
-              disabled={isSubmitting}
+              disabled={isLoading}
             />
           </div>
 
@@ -158,8 +148,10 @@ export function NewCaseModal({
               <Label htmlFor="caseType">Case Type *</Label>
               <Select
                 value={formData.caseType}
-                onValueChange={(value) => handleInputChange("caseType", value)}
-                disabled={isSubmitting}
+                onValueChange={(value) =>
+                  handleInputChange("caseType", value as CaseType)
+                }
+                disabled={isLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select case type" />
@@ -179,7 +171,7 @@ export function NewCaseModal({
               <Select
                 value={formData.country}
                 onValueChange={(value) => handleInputChange("country", value)}
-                disabled={isSubmitting}
+                disabled={isLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select country" />
@@ -205,7 +197,7 @@ export function NewCaseModal({
                     "w-full justify-start text-left font-normal",
                     !formData.expectedCompletionDate && "text-muted-foreground"
                   )}
-                  disabled={isSubmitting}
+                  disabled={isLoading}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {formData.expectedCompletionDate ? (
@@ -234,9 +226,7 @@ export function NewCaseModal({
               <p className="text-sm text-red-800 font-medium">
                 Error creating case
               </p>
-              <p className="text-sm text-red-700 mt-1">
-                {error.message || "Something went wrong. Please try again."}
-              </p>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
             </div>
           )}
 
@@ -245,16 +235,16 @@ export function NewCaseModal({
               type="button"
               variant="outline"
               onClick={handleClose}
-              disabled={isSubmitting}
+              disabled={isLoading}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={!isFormValid || isSubmitting}
+              disabled={!isFormValid || isLoading}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isSubmitting ? "Creating Case..." : "Create Case"}
+              {isLoading ? "Creating Case..." : "Create Case"}
             </Button>
           </DialogFooter>
         </form>
