@@ -42,7 +42,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { Case } from "@/types/case";
+import type { Case, ProcessStatus } from "@/types/case";
 
 interface CaseOverviewProps {
   case: Case;
@@ -91,7 +91,9 @@ export function CaseOverview({ case: caseData }: CaseOverviewProps) {
   const { updateCase, deleteCase, isLoading } = useCaseStore();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [editedStatus, setEditedStatus] = useState(caseData.processStatus);
+  const [editedStatus, setEditedStatus] = useState<ProcessStatus>(
+    caseData.processStatus
+  );
   const [editedSteps, setEditedSteps] = useState(caseData.stepsCompleted);
 
   const progress = (caseData.stepsCompleted / caseData.totalSteps) * 100;
@@ -282,7 +284,9 @@ export function CaseOverview({ case: caseData }: CaseOverviewProps) {
                 {isEditing ? (
                   <Select
                     value={editedStatus}
-                    onValueChange={setEditedStatus}
+                    onValueChange={(value) =>
+                      setEditedStatus(value as ProcessStatus)
+                    }
                     disabled={isLoading}
                   >
                     <SelectTrigger>
