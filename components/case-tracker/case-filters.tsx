@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useMemo } from "react";
 import { Search, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,29 +11,60 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CaseFiltersProps } from "@/types/case";
+import { useCaseStore } from "@/store/case-store";
 
-export function CaseFiltersComponent({
-  filters,
-  onFiltersChange,
-  countries,
-  caseTypes,
-  loading = false,
-}: CaseFiltersProps) {
+const formatCaseType = (caseType: string): string => {
+  const caseTypeMap: { [key: string]: string } = {
+    SPONSORED_VISA: "Sponsored Visa",
+    EOR_VISA: "EOR Visa",
+    FAMILY_VISA: "Family Visa",
+    STUDENT_VISA: "Student Visa",
+  };
+  return caseTypeMap[caseType] || caseType;
+};
+
+export function CaseFiltersComponent() {
+  const { filters, cases, countries, isLoading, setFilters } = useCaseStore();
+  const [localSearchTerm, setLocalSearchTerm] = useState(filters.searchTerm);
+
+  // Get case types from loaded cases
+  const caseTypes = useMemo(() => {
+    if (!cases.length) return [];
+    const uniqueTypes = [...new Set(cases.map((case_) => case_.caseType))];
+    return uniqueTypes.sort();
+  }, [cases]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (localSearchTerm !== filters.searchTerm) {
+        setFilters({ searchTerm: localSearchTerm });
+      }
+    }, 500);
+
+    // cancel the timeout if user types again before 500ms
+    return () => clearTimeout(timeoutId);
+  }, [localSearchTerm, filters.searchTerm, setFilters]);
+
+  // Sync local state with store when filters change externally (e.g., clear filters)
+  useEffect(() => {
+    setLocalSearchTerm(filters.searchTerm);
+  }, [filters.searchTerm]);
+
   const handleSearchChange = (value: string) => {
-    onFiltersChange({ ...filters, searchTerm: value });
+    setLocalSearchTerm(value);
   };
 
   const handleCaseTypeChange = (value: string) => {
-    onFiltersChange({ ...filters, caseType: value });
+    setFilters({ caseType: value });
   };
 
   const handleCountryChange = (value: string) => {
-    onFiltersChange({ ...filters, country: value });
+    setFilters({ country: value });
   };
 
   const handleClearFilters = () => {
-    onFiltersChange({
+    setLocalSearchTerm("");
+    setFilters({
       searchTerm: "",
       caseType: "all",
       country: "all",
@@ -49,11 +81,11 @@ export function CaseFiltersComponent({
       <div className="relative flex-1 max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
         <Input
-          placeholder="Search"
-          value={filters.searchTerm}
+          placeholder="Search cases..."
+          value={localSearchTerm}
           onChange={(e) => handleSearchChange(e.target.value)}
           className="pl-10"
-          disabled={loading}
+          disabled={isLoading}
         />
       </div>
       <Button
@@ -68,7 +100,7 @@ export function CaseFiltersComponent({
       <Select
         value={filters.caseType}
         onValueChange={handleCaseTypeChange}
-        disabled={loading}
+        disabled={isLoading}
       >
         <SelectTrigger className="w-40">
           <SelectValue placeholder="Case Type" />
@@ -77,7 +109,7 @@ export function CaseFiltersComponent({
           <SelectItem value="all">All Types</SelectItem>
           {caseTypes.map((type) => (
             <SelectItem key={type} value={type}>
-              {type}
+              {formatCaseType(type)}
             </SelectItem>
           ))}
         </SelectContent>
@@ -86,7 +118,7 @@ export function CaseFiltersComponent({
       <Select
         value={filters.country}
         onValueChange={handleCountryChange}
-        disabled={loading}
+        disabled={isLoading}
       >
         <SelectTrigger className="w-40">
           <SelectValue placeholder="Country" />
@@ -106,7 +138,7 @@ export function CaseFiltersComponent({
           variant="secondary"
           size="sm"
           onClick={handleClearFilters}
-          disabled={loading}
+          disabled={isLoading}
         >
           Clear Filters
         </Button>
@@ -116,7 +148,7 @@ export function CaseFiltersComponent({
         variant="outline"
         size="sm"
         className="flex items-center space-x-2 bg-transparent"
-        disabled={loading}
+        disabled={isLoading}
       >
         Action Required
       </Button>
