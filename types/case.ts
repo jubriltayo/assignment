@@ -36,14 +36,6 @@ export interface CaseFilters {
   country: string;
 }
 
-export interface CaseFiltersProps {
-  filters: CaseFilters;
-  onFiltersChange: (filters: CaseFilters) => void;
-  countries: string[];
-  caseTypes: string[];
-  loading?: boolean;
-}
-
 interface ApiError {
   message: string;
   code?: number;

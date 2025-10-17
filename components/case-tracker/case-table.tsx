@@ -16,7 +16,7 @@ import { getCode } from "country-list";
 import { format } from "date-fns";
 import { Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { CaseTableProps } from "@/types/case";
+import { useCaseStore } from "@/store/case-store";
 
 const generateInitials = (name: string): string => {
   return name
@@ -81,10 +81,11 @@ const formatDate = (dateString?: string): string => {
   }
 };
 
-export function CaseTable({ cases, loading, error }: CaseTableProps) {
+export function CaseTable() {
   const router = useRouter();
+  const { cases, isLoading, error } = useCaseStore();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="text-center py-8">
@@ -100,7 +101,7 @@ export function CaseTable({ cases, loading, error }: CaseTableProps) {
       <div className="bg-white rounded-lg border border-gray-200 p-8">
         <div className="text-center text-red-600">
           <p className="font-medium">Error loading cases</p>
-          <p className="text-sm mt-1">{error.message}</p>
+          <p className="text-sm mt-1">{error}</p>
         </div>
       </div>
     );
