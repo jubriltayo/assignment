@@ -93,6 +93,7 @@ export const useCaseStore = create<CaseStore>()(
           set({ casesNeedingAction: cases });
         } catch (error) {
           console.error("Error fetching cases needing action:", error);
+          set({ casesNeedingAction: [] });
         }
       },
 

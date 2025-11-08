@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { NewCaseModal } from "./new-case-modal";
+import { NewCaseModal, type NewCaseModalHandle } from "./new-case-modal";
 import { Toast } from "@/components/ui/toast";
 import { Plus } from "lucide-react";
 
 export function PageHeader() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const newCaseModalRef = useRef<NewCaseModalHandle>(null);
   const [toast, setToast] = useState<{ message: string; isVisible: boolean }>({
     message: "",
     isVisible: false,
@@ -27,6 +27,10 @@ export function PageHeader() {
     });
   };
 
+  const handleOpenNewCaseModal = () => {
+    newCaseModalRef.current?.open();
+  };
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -34,9 +38,9 @@ export function PageHeader() {
         <div className="flex space-x-3">
           <Button
             className="bg-blue-600 hover:bg-blue-700"
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenNewCaseModal}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 mr-2" />
             Start new case
           </Button>
           <Button
@@ -49,11 +53,7 @@ export function PageHeader() {
         </div>
       </div>
 
-      <NewCaseModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={handleNewCaseSuccess}
-      />
+      <NewCaseModal ref={newCaseModalRef} onSuccess={handleNewCaseSuccess} />
 
       <Toast
         message={toast.message}

@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import { useCaseStore } from "@/store/case-store";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,27 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { getNames } from "country-list";
-import { cn } from "@/lib/utils";
-import type {
-  NewCaseModalProps,
-  CaseType,
-  CreateCaseInput,
-} from "@/types/case";
+import { CaseType, type CreateCaseInput } from "@/types/case";
 
-const caseTypes: Array<{ value: CaseType; label: string }> = [
-  { value: "SPONSORED_VISA", label: "Sponsored Visa" },
-  { value: "EOR_VISA", label: "EOR Visa" },
-  { value: "FAMILY_VISA", label: "Family Visa" },
-  { value: "STUDENT_VISA", label: "Student Visa" },
+const caseTypes = [
+  { value: CaseType.SPONSORED_VISA, label: "Sponsored Visa" },
+  { value: CaseType.EOR_VISA, label: "EOR Visa" },
+  { value: CaseType.FAMILY_VISA, label: "Family Visa" },
+  { value: CaseType.STUDENT_VISA, label: "Student Visa" },
 ];
 
 const countries = getNames().sort();
@@ -53,12 +42,16 @@ interface FormData {
   expectedCompletionDate: Date | undefined;
 }
 
-export function NewCaseModal({
-  isOpen,
-  onClose,
-  onSuccess,
-}: NewCaseModalProps) {
+export interface NewCaseModalHandle {
+  open: () => void;
+}
+
+export const NewCaseModal = forwardRef<
+  NewCaseModalHandle,
+  { onSuccess?: () => void }
+>(({ onSuccess }, ref) => {
   const { createCase, isLoading } = useCaseStore();
+  const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: "",
     caseType: "",
@@ -67,11 +60,30 @@ export function NewCaseModal({
   });
   const [error, setError] = useState<string | null>(null);
 
+  useImperativeHandle(ref, () => ({
+    open: () => {
+      setIsOpen(true);
+      setFormData({
+        name: "",
+        caseType: "",
+        country: "",
+        expectedCompletionDate: undefined,
+      });
+      setError(null);
+    },
+  }));
+
   const handleInputChange = (
     field: keyof FormData,
-    value: string | Date | undefined
+    value: string | CaseType | Date | undefined
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const dateString = e.target.value;
+    const date = dateString ? new Date(dateString) : undefined;
+    handleInputChange("expectedCompletionDate", date);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,21 +118,14 @@ export function NewCaseModal({
   };
 
   const handleClose = () => {
-    setFormData({
-      name: "",
-      caseType: "",
-      country: "",
-      expectedCompletionDate: undefined,
-    });
-    setError(null);
-    onClose();
+    setIsOpen(false);
   };
 
   const isFormValid =
     formData.name.trim() && formData.caseType && formData.country;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Start New Case</DialogTitle>
@@ -148,8 +153,8 @@ export function NewCaseModal({
               <Label htmlFor="caseType">Case Type *</Label>
               <Select
                 value={formData.caseType}
-                onValueChange={(value) =>
-                  handleInputChange("caseType", value as CaseType)
+                onValueChange={(value: CaseType) =>
+                  handleInputChange("caseType", value)
                 }
                 disabled={isLoading}
               >
@@ -188,45 +193,40 @@ export function NewCaseModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Expected Completion Date (Optional)</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !formData.expectedCompletionDate && "text-muted-foreground"
-                  )}
-                  disabled={isLoading}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formData.expectedCompletionDate ? (
-                    format(formData.expectedCompletionDate, "PPP")
-                  ) : (
-                    <span>Pick a date (defaults to 30 days)</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={formData.expectedCompletionDate}
-                  onSelect={(date) =>
-                    handleInputChange("expectedCompletionDate", date)
-                  }
-                  disabled={(date) => date < new Date()}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="expectedCompletionDate">
+              Expected Completion Date (Optional)
+            </Label>
+            <div className="flex items-center space-x-2">
+              <Input
+                id="expectedCompletionDate"
+                type="date"
+                value={
+                  formData.expectedCompletionDate
+                    ? formData.expectedCompletionDate
+                        .toISOString()
+                        .split("T")[0]
+                    : ""
+                }
+                onChange={handleDateChange}
+                disabled={isLoading}
+                min={new Date().toISOString().split("T")[0]}
+                className="flex-1"
+              />
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {formData.expectedCompletionDate
+                ? `Selected: ${format(formData.expectedCompletionDate, "PPP")}`
+                : "If no date is selected, it will default to 30 days from now"}
+            </p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-800 font-medium">
+            <div className="bg-destructive/15 border border-destructive/50 rounded-lg p-3">
+              <p className="text-sm font-medium text-destructive">
                 Error creating case
               </p>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
+              <p className="text-sm text-destructive/90 mt-1">{error}</p>
             </div>
           )}
 
@@ -251,4 +251,6 @@ export function NewCaseModal({
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+NewCaseModal.displayName = "NewCaseModal";
