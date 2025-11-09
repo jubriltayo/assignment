@@ -2,12 +2,12 @@ import client from "@/lib/apollo-client";
 import {
   GET_ALL_CASES,
   GET_CASES_NEEDING_ACTION,
-  CREATE_CASE_MUTATION,
+  // CREATE_CASE_MUTATION,
   GET_CASE_BY_ID,
   GET_COUNTRIES,
   GET_CASE_STATS,
-  UPDATE_CASE,
-  DELETE_CASE,
+  // UPDATE_CASE,
+  // DELETE_CASE,
 } from "@/graphql/queries";
 import type {
   Case,
@@ -175,6 +175,93 @@ export class CaseService {
     }
   }
 
+  // REST API Calls for Mutations
+  static async createCase(input: CreateCaseInput): Promise<Case> {
+    try {
+      const response = await fetch("/api/cases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create case");
+      }
+
+      return result.case;
+    } catch (error) {
+      console.error("Error creating case:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  static async updateCase(id: string, input: UpdateCaseInput): Promise<Case> {
+    try {
+      const response = await fetch(`/api/cases/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update case");
+      }
+
+      return result.case;
+    } catch (error) {
+      console.error("Error updating case:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  static async deleteCase(id: string): Promise<boolean> {
+    try {
+      const response = await fetch(`/api/cases/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to delete case");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error deleting case:", error);
+      throw this.handleError(error);
+    }
+  }
+
+  // NO MORE GRAPHQL DIRECT CALLS TO BACKEND - RATHER WE GO THROUGH REQEUST BODY
+  /**
   static async createCase(input: CreateCaseInput): Promise<Case> {
     try {
       const { data, errors } = await client.mutate<{ createCase: Case }>({
@@ -239,6 +326,7 @@ export class CaseService {
       throw this.handleError(error);
     }
   }
+  */
 
   private static handleError(error: unknown): Error {
     if (error instanceof ApolloError) {

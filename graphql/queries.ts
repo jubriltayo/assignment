@@ -78,28 +78,28 @@ export const GET_CASE_STATS = gql`
 `;
 
 // MUTATIONS
-export const CREATE_CASE_MUTATION = gql`
-  ${CASE_CORE_FIELDS}
+// export const CREATE_CASE_MUTATION = gql`
+//   ${CASE_CORE_FIELDS}
 
-  mutation CreateCase($input: CreateCaseInput!) {
-    createCase(input: $input) {
-      ...CaseCoreFields
-    }
-  }
-`;
+//   mutation CreateCase($input: CreateCaseInput!) {
+//     createCase(input: $input) {
+//       ...CaseCoreFields
+//     }
+//   }
+// `;
 
-export const UPDATE_CASE = gql`
-  ${CASE_CORE_FIELDS}
+// export const UPDATE_CASE = gql`
+//   ${CASE_CORE_FIELDS}
 
-  mutation UpdateCase($id: ID!, $input: UpdateCaseInput!) {
-    updateCase(id: $id, input: $input) {
-      ...CaseCoreFields
-    }
-  }
-`;
+//   mutation UpdateCase($id: ID!, $input: UpdateCaseInput!) {
+//     updateCase(id: $id, input: $input) {
+//       ...CaseCoreFields
+//     }
+//   }
+// `;
 
-export const DELETE_CASE = gql`
-  mutation DeleteCase($id: ID!) {
-    deleteCase(id: $id)
-  }
-`;
+// export const DELETE_CASE = gql`
+//   mutation DeleteCase($id: ID!) {
+//     deleteCase(id: $id)
+//   }
+// `;
